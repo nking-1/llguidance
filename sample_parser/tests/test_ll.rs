@@ -1364,3 +1364,35 @@ fn test_stop_crash() {
         &["", " wait‧ times‧.‧\n‧Best‧=‧3‧≺EOS≻"],
     );
 }
+
+#[test]
+#[should_panic]
+fn test_stop_should_not_mask_tokens() {
+    // BUG: The stop sequence masks tokens from the vocabulary instead of halting
+    // generation when the full stop pattern appears.
+    //
+    // Root cause: In lexerspec.rs, stop is implemented as a LookAhead in the regex:
+    //   Concat(body_rx, LookAhead(stop_rx))
+    // This bakes the stop into the regex constraint, which prevents the model from
+    // generating tokens that contain characters from the stop pattern.
+    //
+    // Real-world example: gen(stop=['```']) is used to generate code inside markdown
+    // fences. With stop=['`'] (single backtick), NO backtick token can ever be
+    // generated, causing the model to loop until max_tokens.
+    //
+    // See also: test_stop_crash above (issue #182) for another manifestation.
+    //
+    // Currently panics with: num_rows=2 row_infos=1 in assert_definitive_inner
+    // when a token partially matches the stop sequence.
+    // Remove #[should_panic] once fixed.
+
+    // Test: stop="XX" should not prevent generating a single "X" in content.
+    // The model generates "aXb", then "XX" triggers the stop, then "end" is forced.
+    check_lark_grammar(
+        r#"
+            start: gen "XX" "end"
+            gen[stop="XX"]: /(?s:.*)/
+        "#,
+        &["", "a‧X‧b‧XX", "end"],
+    );
+}
