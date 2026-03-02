@@ -151,6 +151,14 @@ impl TokenParser {
         self.parser.stats()
     }
 
+    pub fn get_chart_items(&self) -> Vec<(usize, usize, String)> {
+        self.parser.get_chart_items()
+    }
+
+    pub fn get_symbol_legend(&self) -> Vec<(usize, String, String)> {
+        self.parser.get_symbol_legend()
+    }
+
     pub fn last_step_stats(&self) -> &ParserStats {
         &self.last_step_stats
     }

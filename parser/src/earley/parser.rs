@@ -2846,6 +2846,53 @@ impl Parser {
         self.shared.lock().unwrap().lexer().dfa.stats()
     }
 
+    /// Return human-readable dotted-rule strings for all items in all active rows.
+    /// Each entry is (row_index, origin_row, dotted_rule_string).
+    pub fn get_chart_items(&self) -> Vec<(usize, usize, String)> {
+        let mut result = Vec::new();
+        let num = self.state.num_rows();
+        for row_idx in 0..num {
+            if row_idx >= self.state.rows.len() {
+                break;
+            }
+            let row = &self.state.rows[row_idx];
+            for item_idx in row.item_indices() {
+                if item_idx >= self.state.scratch.items.len() {
+                    break;
+                }
+                let item = &self.state.scratch.items[item_idx];
+                let param = self
+                    .state
+                    .scratch
+                    .item_args
+                    .get(item_idx)
+                    .copied()
+                    .unwrap_or_default();
+                let rule_str = item_to_string(
+                    &self.state.grammar,
+                    item,
+                    param,
+                );
+                result.push((row_idx, item.start_pos(), rule_str));
+            }
+        }
+        result
+    }
+
+    /// Return a mapping of terminal symbol indices to human-readable names.
+    pub fn get_symbol_legend(&self) -> Vec<(usize, String, String)> {
+        let lexer_spec = self.state.grammar.lexer_spec();
+        let mut legend = Vec::new();
+        for (i, lex) in lexer_spec.lexemes.iter().enumerate() {
+            if lex.is_skip || lex.is_extra {
+                continue;
+            }
+            let def = lexer_spec.lexeme_def_to_string(lex.idx);
+            legend.push((i, lex.name.clone(), def));
+        }
+        legend
+    }
+
     pub fn get_error(&self) -> Option<ParserError> {
         let shared = self.shared.lock().unwrap();
         if let Some(e) = shared.lexer().dfa.get_error() {

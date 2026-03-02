@@ -184,6 +184,20 @@ impl LLInterpreter {
     fn has_pending_stop(&self) -> bool {
         self.inner.has_pending_stop()
     }
+
+    /// Return the current Earley chart items as JSON.
+    /// Each item is [row_index, origin_row, "dotted_rule_string"].
+    fn get_chart_items(&self) -> String {
+        let items = self.inner.parser.get_chart_items();
+        serde_json::to_string(&items).unwrap_or_else(|_| "[]".to_string())
+    }
+
+    /// Return terminal symbol legend as JSON.
+    /// Each entry is [index, "name", "definition"].
+    fn get_symbol_legend(&self) -> String {
+        let legend = self.inner.parser.get_symbol_legend();
+        serde_json::to_string(&legend).unwrap_or_else(|_| "[]".to_string())
+    }
 }
 
 #[derive(Serialize, Deserialize)]
